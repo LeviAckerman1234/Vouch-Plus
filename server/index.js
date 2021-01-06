@@ -12,6 +12,14 @@ const client = new Discord.Client();
 
 client.on('ready', () => {
 	console.log("Discord bot ready");
+
+	client.user.setPresence({
+		status: "online",
+		game: {
+			name: "+help for help",
+			type: "PLAYING"
+		}
+	})
 })
 
 // Handle message

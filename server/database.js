@@ -19,12 +19,15 @@ mongoose.connection.on('error', function (err) {
 })
 
 exports.createUserProfile = function (id, callback) {
-	User.create({
-		id: id
-	}, function (err) {
+	User.findOne({id: id}, function (err, user) {
 		if (err) return callback(err);
+		if (user) return callback("ERR_PROFILE_ALREADY_CREATED");
 
-		callback(null);
+		User.create({id: id}, function (err) {
+			if (err) return callback(err);
+
+			callback(null);
+		})
 	})
 }
 

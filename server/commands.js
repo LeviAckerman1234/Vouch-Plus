@@ -11,6 +11,7 @@ exports.help = function (msg) {
 	message += "\n";
 	message += "`+profile` - View your own profile\n";
 	message += "`+profile [user tag or id]` - View another user's profile\n";
+	message += "`+profile setup` - Setup your profile\n";
 	message += "`+rep [user tag] [message]` - Leave a positive reputation on a user's profile\n";
 	message += "`-rep [user tag] [message]` - Leave a negative reputation on a user's profile\n";
 	message += "`+vouches [user tag] (page number)` - View a list of a user's vouches\n";
@@ -64,7 +65,13 @@ exports.profile = function (msg, args, client) {
 				// Delete loading message
 				loading_message.delete()
 
-				if (err === "ERR_NO_USER_FOUND") return msg.reply("user does not have a profile on Vouch Plus.");
+				if (err === "ERR_NO_USER_FOUND") {
+					if (id === msg.author.id) {
+						return msg.reply("you do not have a profile on Vouch Plus. Please run +help for help.");
+					} else {
+						return msg.reply("user does not have a profile on Vouch Plus.");
+					}
+				}
 
 				console.error(err);
 				Sentry.captureException(err);
@@ -80,7 +87,7 @@ exports.profile = function (msg, args, client) {
 			message += "`=================[ Vouch Plus ]=================`\n";
 			message += `Viewing profile of <@${id}>\n`;
 			message += `Reputation ${reputation_sum} (${positive_rep} positive, ${negative_rep} negative)\n`;
-			message += `DWC: ${profile.dwc}\n`;
+			message += `DWC: \`${profile.dwc}\`\n`;
 			message += '\n';
 			message += '`........[ Vouches ]........`\n'
 
