@@ -43,7 +43,7 @@ exports.profile = function (msg, args, client) {
 
 		if (first_arg === "setup") return setup_profile(msg);
 
-		first_arg = first_arg.replace(/[<>@]/g, '');
+		first_arg = first_arg.replace(/[<@!>]/g, '');
 
 		if (!lib.isNumber(first_arg)) { // If discord ID is not valid (attempted db attack?)
 			if (msg.mentions.users.first()?.id === first_arg) {
