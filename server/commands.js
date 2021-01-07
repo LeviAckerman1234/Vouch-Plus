@@ -167,7 +167,7 @@ exports.rep = function (msg, args, type) {
 }
 
 exports.vouches = function (msg, args) {
-	if (args === 0 || args > 2) return msg.reply('invalid format. Run +help for help.');
+	if (args.length !== 1 && args.length !== 2) return msg.reply('invalid format. Run +help for help.');
 
 	// Remove <@ > from tag
 	let id = args[0].replace(/[<@!>]/g, '');
