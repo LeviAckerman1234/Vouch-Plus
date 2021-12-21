@@ -91,7 +91,7 @@ exports.profile = function (msg, args, client) {
 			message += '\n';
 			message += '`........[ Vouches ]........`\n'
 
-			const vouches = profile.vouches.slice(0, 5);
+			const vouches = profile.vouches.reverse().slice(0, 5);
 
 			let count = 0;
 
@@ -100,7 +100,7 @@ exports.profile = function (msg, args, client) {
 				let rep_msg = result.message;
 				if (rep_msg.length > 30) rep_msg = rep_msg.slice(0, 30) + "...";
 
-				const icon = (result.positive) ? "<:uparrow:795808477447716907>️" : "<:downarrow:795809362584404029>";
+				const icon = (result.positive) ? ":arrow_up:" : ":arrow_down:";
 
 				// Convert id of user that sent in reputation to tag
 				lib.idToTag(result.from_id, client, function (err, tag) {
@@ -127,7 +127,7 @@ exports.profile = function (msg, args, client) {
 					})
 
 					message += '\n';
-					message += 'Bot created by cryptographic#1337'
+					message += 'Bot created by cryptographic#1337. DM me for your own coding project you need made!'
 
 					loading_message.edit(message);
 				}
@@ -205,12 +205,12 @@ exports.vouches = function (msg, args) {
 			let count = 0;
 			let vouch_messages = [];
 
-			vouches = vouches.slice(page * 5, page * 5 + 5);
+			vouches = vouches.reverse().slice(page * 5, page * 5 + 5);
 			vouches.forEach(result => {
 				let rep_msg = result.message;
 				if (rep_msg.length > 30) rep_msg = rep_msg.slice(0, 30) + "...";
 
-				const icon = (result.positive) ? "<:uparrow:795808477447716907>️" : "<:downarrow:795809362584404029>";
+				const icon = (result.positive) ? ":arrow_up:" : ":arrow_down:";
 
 				// Convert id of user that sent in reputation to tag
 				lib.idToTag(result.from_id, client, function (err, tag) {
@@ -237,7 +237,7 @@ exports.vouches = function (msg, args) {
 					})
 
 					message += '\n';
-					message += 'Bot created by cryptographic#1337'
+					message += 'Bot created by cryptographic#1337. DM me for your own coding project you need made!'
 
 					loading_message.edit(message);
 				}

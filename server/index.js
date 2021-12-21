@@ -36,12 +36,6 @@ client.on("message", function (msg) {
 	// Strip command from args
 	const command = args.shift().toLowerCase();
 
-	if (msg.guild.name === "ExCrypto" && msg.channel.name === "💰reputation💰" && command !== "rep") return msg.reply('Please use #bot-spam channel to view profiles').then(message => {
-		setTimeout(() => {
-			message.delete()
-		}, 5000);
-	})
-
 	/******* Handle Commands *******/
 	// Reputation commands
 	if (command === "p" || command === "profile") return commands.profile(msg, args, client);
