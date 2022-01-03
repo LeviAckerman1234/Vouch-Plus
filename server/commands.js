@@ -71,59 +71,55 @@ exports.profile = function (msg, args, client) {
 
 	if (id === -1) return msg.reply("user does not have a profile on Vouch Plus.");
 
-	// Send loading message
-	msg.channel.send("Loading... Please wait.").then(loading_message => {
-		// Get user profile from database
-		database.getUserProfile(id, function (err, profile) {
-				if (err) {
-					// Delete loading message
-					loading_message.delete()
+	// Get user profile from database
+	database.getUserProfile(id, function (err, profile) {
+			if (err) {
+				// Delete loading message
+				loading_message.delete()
 
-					if (err === "ERR_NO_USER_FOUND") {
-						if (id === msg.author.id) {
-							return msg.reply("you do not have a profile on Vouch Plus. Please run +help for help.");
-						} else {
-							return msg.reply("user does not have a profile on Vouch Plus.");
-						}
+				if (err === "ERR_NO_USER_FOUND") {
+					if (id === msg.author.id) {
+						return msg.reply("you do not have a profile on Vouch Plus. Please run +help for help.");
+					} else {
+						return msg.reply("user does not have a profile on Vouch Plus.");
 					}
-
-					console.error(err);
-					Sentry.captureException(err);
-					return msg.reply('There was an unknown error. Please try again later.');
 				}
 
-				// Get reputation sum
-				const positive_rep = profile.vouches.filter(e => e.positive === true).length;
-				const negative_rep = profile.vouches.filter(e => e.positive === false).length;
-				const reputation_sum = positive_rep - negative_rep;
-
-				let vouch_objects = profile.vouches.reverse().slice(0, 5);
-				generate_vouches(vouch_objects, client, function (vouches) {
-					let vouch_text = "";
-
-					vouches.forEach(vouch => {
-						vouch_text += vouch + "\n"
-					})
-
-					const remaining_vouches = profile.vouches.length - vouches.length;
-
-					if (remaining_vouches > 0) vouch_text += `*+ ${remaining_vouches} more*`
-
-					lib.idToTag(id, client, function (err, tag) {
-						const embed = new MessageEmbed()
-							.setColor(config.EMBED_COLOR)
-							.setTitle(`Viewing profile of ${tag}`)
-							.addField("Reputation", `${reputation_sum} (${positive_rep} positive, ${negative_rep} negative)`, true)
-							.addField("DWC", profile.dwc, true)
-							.addField("Vouches", vouch_text, false)
-							.setFooter("Bot created by cryptographic#1337. DM me for your own coding project you need made!");
-
-						loading_message.edit(embed);
-					})
-				});
+				console.error(err);
+				Sentry.captureException(err);
+				return msg.reply('There was an unknown error. Please try again later.');
 			}
-		)
-	})
+
+			// Get reputation sum
+			const positive_rep = profile.vouches.filter(e => e.positive === true).length;
+			const negative_rep = profile.vouches.filter(e => e.positive === false).length;
+			const reputation_sum = positive_rep - negative_rep;
+
+			let vouch_objects = profile.vouches.reverse().slice(0, 5);
+			generate_vouches(vouch_objects, client, function (vouches) {
+				let vouch_text = "";
+
+				vouches.forEach(vouch => {
+					vouch_text += vouch + "\n"
+				})
+
+				const remaining_vouches = profile.vouches.length - vouches.length;
+
+				if (remaining_vouches > 0) vouch_text += `*+ ${remaining_vouches} more*`
+
+				lib.idToTag(id, client, function (err, tag) {
+					const embed = new MessageEmbed()
+						.setColor(config.EMBED_COLOR)
+						.setTitle(`Viewing profile of ${tag}`)
+						.addField("Reputation", `${reputation_sum} (${positive_rep} positive, ${negative_rep} negative)`, true)
+						.addField("DWC", profile.dwc, true)
+						.addField("Vouches", vouch_text, false)
+						.setFooter("Bot created by cryptographic#1337. DM me for your own coding project you need made!");
+
+					loading_message.edit(embed);
+				})
+			});
+		})
 }
 
 exports.rep = function (msg, args, type) {
@@ -167,44 +163,41 @@ exports.vouches = function (msg, args, client) {
 	if (!page) page = 1;
 	if (!lib.isNumber(page) || page < 1) return msg.reply('please enter a valid page number.');
 
-	msg.channel.send("Loading... Please wait.").then(loading_message => {
-		database.getUserVouches(id, function (err, user_vouches) {
-			if (err) {
-				loading_message.delete()
+	database.getUserVouches(id, function (err, user_vouches) {
+		if (err) {
 
-				if (err === "ERR_NO_USER_FOUND") return msg.reply('user does not have a profile on Vouch Plus.');
+			if (err === "ERR_NO_USER_FOUND") return msg.reply('user does not have a profile on Vouch Plus.');
 
-				console.error(err);
-				Sentry.captureException(err);
-				return msg.reply('There was an unknown error. Please try again later.');
-			}
+			console.error(err);
+			Sentry.captureException(err);
+			return msg.reply('There was an unknown error. Please try again later.');
+		}
 
-			page--;
+		page--;
 
-			if (page * 5 > user_vouches.length && page > 1) {
-				loading_message.delete()
+		if (page * 5 > user_vouches.length && page > 1) {
+			loading_message.delete()
 
-				return msg.reply('page number is too high.');
-			}
+			return msg.reply('page number is too high.');
+		}
 
-			let vouch_objects = user_vouches.reverse().slice(page * 5, page * 5 + 5);
-			generate_vouches(vouch_objects, client, function (vouches) {
-				let vouch_text = "";
+		let vouch_objects = user_vouches.reverse().slice(page * 5, page * 5 + 5);
+		generate_vouches(vouch_objects, client, function (vouches) {
+			let vouch_text = "";
 
-				vouches.forEach(vouch => {
-					vouch_text += vouch + "\n"
-				})
-
-				lib.idToTag(id, client, function (err, tag) {
-					const embed = new MessageEmbed()
-						.setColor(config.EMBED_COLOR)
-						.setTitle(`Viewing page ${page + 1} of ${tag} vouches`)
-						.addField("Vouches", vouch_text)
-						.setFooter("Bot created by cryptographic#1337. DM me for your own coding project you need made!");
-
-					loading_message.edit(embed);
-				});
+			vouches.forEach(vouch => {
+				vouch_text += vouch + "\n"
 			})
+
+			lib.idToTag(id, client, function (err, tag) {
+				const embed = new MessageEmbed()
+					.setColor(config.EMBED_COLOR)
+					.setTitle(`Viewing page ${page + 1} of ${tag} vouches`)
+					.addField("Vouches", vouch_text)
+					.setFooter("Bot created by cryptographic#1337. DM me for your own coding project you need made!");
+
+				loading_message.edit(embed);
+			});
 		})
 	})
 }
