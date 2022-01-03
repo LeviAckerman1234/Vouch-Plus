@@ -74,9 +74,6 @@ exports.profile = function (msg, args, client) {
 	// Get user profile from database
 	database.getUserProfile(id, function (err, profile) {
 			if (err) {
-				// Delete loading message
-				loading_message.delete()
-
 				if (err === "ERR_NO_USER_FOUND") {
 					if (id === msg.author.id) {
 						return msg.reply("you do not have a profile on Vouch Plus. Please run +help for help.");
