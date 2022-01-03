@@ -113,7 +113,7 @@ exports.profile = function (msg, args, client) {
 						.addField("Vouches", vouch_text, false)
 						.setFooter("Bot created by cryptographic#1337. DM me for your own coding project you need made!");
 
-					loading_message.edit(embed);
+					msg.channel.send(embed);
 				})
 			});
 		})
@@ -173,8 +173,6 @@ exports.vouches = function (msg, args, client) {
 		page--;
 
 		if (page * 5 > user_vouches.length && page > 1) {
-			loading_message.delete()
-
 			return msg.reply('page number is too high.');
 		}
 
@@ -193,7 +191,7 @@ exports.vouches = function (msg, args, client) {
 					.addField("Vouches", vouch_text)
 					.setFooter("Bot created by cryptographic#1337. DM me for your own coding project you need made!");
 
-				loading_message.edit(embed);
+				msg.channel.send(embed);
 			});
 		})
 	})
