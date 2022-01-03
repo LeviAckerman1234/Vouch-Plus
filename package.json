@@ -8,10 +8,10 @@
     "start-dev": "nodemon server/index.js"
   },
   "dependencies": {
+    "@sentry/node": "^5.29.2",
     "discord.js": "^12.5.1",
     "dotenv": "^8.2.0",
     "mongoose": "^5.11.9",
-    "@sentry/node": "^5.29.2",
     "uuid": "^8.3.2"
   },
   "devDependencies": {

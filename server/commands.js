@@ -1,28 +1,11 @@
 const Sentry = require("@sentry/node");
+const {MessageEmbed} = require('discord.js');
 
 const lib = require('./lib');
 const database = require('./database');
+const config = require('./config');
 
-exports.help = function (msg) {
-	msg.react("✅");
-
-	let message = "";
-	message += "`=================[ Vouch Plus ]=================`\n";
-	message += "\n";
-	message += "`+profile` - View your own profile\n";
-	message += "`+profile [user tag or id]` - View another user's profile\n";
-	message += "`+profile setup` - Setup your profile\n";
-	message += "`+rep [user tag] [message]` - Leave a positive reputation on a user's profile\n";
-	message += "`-rep [user tag] [message]` - Leave a negative reputation on a user's profile\n";
-	message += "`+vouches [user tag] (page number)` - View a list of a user's vouches\n";
-	message += "\n";
-	message += "`+help` - View this message\n";
-	message += "`+ping` - View this bot's latency";
-
-	msg.author.send(message);
-}
-
-const setup_profile = function (msg) {
+exports.setup_profile = function (msg) {
 	database.createUserProfile(msg.author.id, function (err) {
 		if (err) {
 			if (err === "ERR_PROFILE_ALREADY_CREATED") return msg.reply('Your profile has already been created. Run +profile to view your profile.')
@@ -35,104 +18,111 @@ const setup_profile = function (msg) {
 		msg.reply('Your profile has successfully been created.');
 	})
 }
-exports.profile = function (msg, args, client) {
-	let id;
 
+const get_target = function (msg, args) {
 	if (args.length > 0) { // Handle arguments
 		let first_arg = args[0];
 
-		if (first_arg === "setup") return setup_profile(msg);
-
 		first_arg = first_arg.replace(/[<@!>]/g, '');
 
-		if (!lib.isNumber(first_arg)) { // If discord ID is not valid (attempted db attack?)
-			if (msg.mentions.users.first()?.id === first_arg) {
-				return msg.reply('user does not have a profile on Vouch Plus.');
-			} else {
-				return msg.reply('please enter a valid discord id.');
-			}
+		if (!lib.isNumber(first_arg)) { // If discord ID is not valid
+			return -1;
 		} else {
-			id = first_arg;
+			return first_arg;
 		}
 	} else {
-		id = msg.author.id;
+		return msg.author.id;
 	}
+}
+
+const generate_vouches = function (vouch_objects, client, callback) {
+	let count = 0;
+	let vouches = [];
+
+	if (vouch_objects.length > 0) {
+		vouch_objects.forEach((result, index) => {
+			let message = result.message;
+			if (message.length > 30) message = message.slice(0, 30) + "...";
+
+			const icon = (result.positive) ? ":arrow_up:" : ":arrow_down:";
+
+			// Convert id of user that sent in reputation to tag
+			lib.idToTag(result.from_id, client, function (err, tag) {
+				const human_index = index + 1;
+				const date = lib.dateToString(result.date);
+
+				vouches[index] = `${human_index}) ${icon} ${tag} ${message} | ${date}`
+
+				count++;
+
+				if (count === vouch_objects.length) {
+					return callback(vouches);
+				}
+			})
+		})
+	} else {
+		return callback(["No vouches yet..."]);
+	}
+}
+
+exports.profile = function (msg, args, client) {
+	// Get the ID that command is targeting (self or other user)
+	id = get_target(msg, args);
+
+	if (id === -1) return msg.reply("user does not have a profile on Vouch Plus.");
 
 	// Send loading message
 	msg.channel.send("Loading... Please wait.").then(loading_message => {
+		// Get user profile from database
 		database.getUserProfile(id, function (err, profile) {
-			if (err) {
-				// Delete loading message
-				loading_message.delete()
+				if (err) {
+					// Delete loading message
+					loading_message.delete()
 
-				if (err === "ERR_NO_USER_FOUND") {
-					if (id === msg.author.id) {
-						return msg.reply("you do not have a profile on Vouch Plus. Please run +help for help.");
-					} else {
-						return msg.reply("user does not have a profile on Vouch Plus.");
+					if (err === "ERR_NO_USER_FOUND") {
+						if (id === msg.author.id) {
+							return msg.reply("you do not have a profile on Vouch Plus. Please run +help for help.");
+						} else {
+							return msg.reply("user does not have a profile on Vouch Plus.");
+						}
 					}
+
+					console.error(err);
+					Sentry.captureException(err);
+					return msg.reply('There was an unknown error. Please try again later.');
 				}
 
-				console.error(err);
-				Sentry.captureException(err);
-				return msg.reply('There was an unknown error. Please try again later.');
-			}
+				// Get reputation sum
+				const positive_rep = profile.vouches.filter(e => e.positive === true).length;
+				const negative_rep = profile.vouches.filter(e => e.positive === false).length;
+				const reputation_sum = positive_rep - negative_rep;
 
-			// Get reputation sum
-			const positive_rep = profile.vouches.filter(e => e.positive === true).length;
-			const negative_rep = profile.vouches.filter(e => e.positive === false).length;
-			const reputation_sum = positive_rep - negative_rep;
+				let vouch_objects = profile.vouches.reverse().slice(0, 5);
+				generate_vouches(vouch_objects, client, function (vouches) {
+					let vouch_text = "";
 
-			let message = "";
-			message += "`=================[ Vouch Plus ]=================`\n";
-			message += `Viewing profile of <@${id}>\n`;
-			message += `Reputation ${reputation_sum} (${positive_rep} positive, ${negative_rep} negative)\n`;
-			message += `DWC: \`${profile.dwc}\`\n`;
-			message += '\n';
-			message += '`........[ Vouches ]........`\n'
-
-			const vouches = profile.vouches.reverse().slice(0, 5);
-
-			let count = 0;
-
-			let vouch_messages = [];
-			vouches.forEach((result, index) => {
-				let rep_msg = result.message;
-				if (rep_msg.length > 30) rep_msg = rep_msg.slice(0, 30) + "...";
-
-				const icon = (result.positive) ? ":arrow_up:" : ":arrow_down:";
-
-				// Convert id of user that sent in reputation to tag
-				lib.idToTag(result.from_id, client, function (err, tag) {
-					vouch_messages.push({
-						index: index,
-						message: `${index + 1}) ${icon} ${tag} ${rep_msg} | ${lib.dateToString(result.date)} \n`
-					});
-
-					fetch_callback();
-				})
-			})
-
-			if (vouches.length === 0) {
-				message += 'No vouches yet...\n';
-				fetch_callback();
-			}
-
-			function fetch_callback() {
-				count++;
-
-				if (count === vouches.length || vouches.length === 0) {
-					vouch_messages.sort((a, b) => a.index - b.index).forEach(result => {
-						message += result.message
+					vouches.forEach(vouch => {
+						vouch_text += vouch + "\n"
 					})
 
-					message += '\n';
-					message += 'Bot created by cryptographic#1337. DM me for your own coding project you need made!'
+					const remaining_vouches = profile.vouches.length - vouches.length;
 
-					loading_message.edit(message);
-				}
+					if (remaining_vouches > 0) vouch_text += `*+ ${remaining_vouches} more*`
+
+					lib.idToTag(id, client, function (err, tag) {
+						const embed = new MessageEmbed()
+							.setColor(config.EMBED_COLOR)
+							.setTitle(`Viewing profile of ${tag}`)
+							.addField("Reputation", `${reputation_sum} (${positive_rep} positive, ${negative_rep} negative)`, true)
+							.addField("DWC", profile.dwc, true)
+							.addField("Vouches", vouch_text, false)
+							.setFooter("Bot created by cryptographic#1337. DM me for your own coding project you need made!");
+
+						loading_message.edit(embed);
+					})
+				});
 			}
-		})
+		)
 	})
 }
 
@@ -166,7 +156,7 @@ exports.rep = function (msg, args, type) {
 	})
 }
 
-exports.vouches = function (msg, args) {
+exports.vouches = function (msg, args, client) {
 	if (args.length !== 1 && args.length !== 2) return msg.reply('invalid format. Run +help for help.');
 
 	// Remove <@ > from tag
@@ -178,7 +168,7 @@ exports.vouches = function (msg, args) {
 	if (!lib.isNumber(page) || page < 1) return msg.reply('please enter a valid page number.');
 
 	msg.channel.send("Loading... Please wait.").then(loading_message => {
-		database.getUserVouches(id, function (err, vouches) {
+		database.getUserVouches(id, function (err, user_vouches) {
 			if (err) {
 				loading_message.delete()
 
@@ -189,61 +179,57 @@ exports.vouches = function (msg, args) {
 				return msg.reply('There was an unknown error. Please try again later.');
 			}
 
-			if (page * 5 > vouches.length && page > 1) {
+			page--;
+
+			if (page * 5 > user_vouches.length && page > 1) {
 				loading_message.delete()
 
 				return msg.reply('page number is too high.');
 			}
 
-			let message = "";
-			message += "`=================[ Vouch Plus ]=================`\n";
-			message += `Viewing vouches of <@${id}>\n`;
-			message += `Page ${page}\n`;
-			message += "\n";
-			message += '`........[ Vouches ]........`\n';
+			let vouch_objects = user_vouches.reverse().slice(page * 5, page * 5 + 5);
+			generate_vouches(vouch_objects, client, function (vouches) {
+				let vouch_text = "";
 
-			let count = 0;
-			let vouch_messages = [];
-
-			vouches = vouches.reverse().slice(page * 5, page * 5 + 5);
-			vouches.forEach(result => {
-				let rep_msg = result.message;
-				if (rep_msg.length > 30) rep_msg = rep_msg.slice(0, 30) + "...";
-
-				const icon = (result.positive) ? ":arrow_up:" : ":arrow_down:";
-
-				// Convert id of user that sent in reputation to tag
-				lib.idToTag(result.from_id, client, function (err, tag) {
-					vouch_messages.push({
-						index: index,
-						message: `${index + 1}) ${icon} ${tag} ${rep_msg} | ${lib.dateToString(result.date)} \n`
-					});
-
-					fetch_callback();
+				vouches.forEach(vouch => {
+					vouch_text += vouch + "\n"
 				})
+
+				lib.idToTag(id, client, function (err, tag) {
+					const embed = new MessageEmbed()
+						.setColor(config.EMBED_COLOR)
+						.setTitle(`Viewing page ${page + 1} of ${tag} vouches`)
+						.addField("Vouches", vouch_text)
+						.setFooter("Bot created by cryptographic#1337. DM me for your own coding project you need made!");
+
+					loading_message.edit(embed);
+				});
 			})
-
-			if (vouches.length === 0) {
-				message += 'No vouches yet...\n';
-				fetch_callback();
-			}
-
-			function fetch_callback() {
-				count++;
-
-				if (count === vouches.length || vouches.length === 0) {
-					vouch_messages.sort((a, b) => a.index - b.index).forEach(result => {
-						message += result.message
-					})
-
-					message += '\n';
-					message += 'Bot created by cryptographic#1337. DM me for your own coding project you need made!'
-
-					loading_message.edit(message);
-				}
-			}
 		})
 	})
+}
+
+exports.help = function (msg) {
+	msg.react("✅");
+
+	let description = "";
+	description += "`+profile` - View your own profile\n";
+	description += "`+profile [user tag or id]` - View another user's profile\n";
+	description += "`+profile setup` - Setup your profile\n";
+	description += "`+rep [user tag] [message]` - Leave a positive reputation on a user's profile\n";
+	description += "`-rep [user tag] [message]` - Leave a negative reputation on a user's profile\n";
+	description += "`+vouches [user tag] (page number)` - View a list of a user's vouches\n";
+	description += "\n";
+	description += "`+help` - View this message\n";
+	description += "`+ping` - View this bot's latency";
+
+	const embed = new MessageEmbed()
+		.setColor(config.EMBED_COLOR)
+		.setTitle("Help")
+		.setDescription(description)
+		.setFooter("Bot created by cryptographic#1337. DM me for your own coding project you need made!");
+
+	msg.author.send(embed);
 }
 
 exports.ping = function (msg) {

@@ -38,9 +38,12 @@ client.on("message", function (msg) {
 
 	/******* Handle Commands *******/
 	// Reputation commands
-	if (command === "p" || command === "profile") return commands.profile(msg, args, client);
+	if (command === "p" || command === "profile") {
+		if (args[0] === "setup") return commands.setup_profile(msg);
+		return commands.profile(msg, args, client);
+	}
 	if (command === "rep") return commands.rep(msg, args, msg.content.slice(0, 1));
-	if (command === "vouches" || command === "v") return commands.vouches(msg, args);
+	if (command === "vouches" || command === "v") return commands.vouches(msg, args, client);
 
 	// System commands
 	if (command === "h" || command === "help") return commands.help(msg);
