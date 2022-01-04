@@ -35,7 +35,7 @@ const get_target = function (msg, args) {
 	}
 }
 
-const generate_vouches = function (vouch_objects, client, callback) {
+const generate_vouches = function (vouch_objects, client, start_index, callback) {
 	let vouches = [];
 
 	if (vouch_objects.length > 0) {
@@ -45,10 +45,9 @@ const generate_vouches = function (vouch_objects, client, callback) {
 
 			const icon = (result.positive) ? ":arrow_up:" : ":arrow_down:";
 
-			const human_index = index + 1;
 			const date = lib.dateToString(result.date);
 
-			vouches[index] = `${human_index}) ${icon} <@${result.from_id}> ${message} | ${date}`
+			vouches[index] = `${start_index + index}) ${icon} <@${result.from_id}> ${message} | ${date}`
 		})
 
 		return callback(vouches);
@@ -85,7 +84,7 @@ exports.profile = function (msg, args, client) {
 		const reputation_sum = positive_rep - negative_rep;
 
 		let vouch_objects = profile.vouches.reverse().slice(0, 5);
-		generate_vouches(vouch_objects, client, function (vouches) {
+		generate_vouches(vouch_objects, client, 1, function (vouches) {
 			let vouch_text = "";
 
 			vouches.forEach(vouch => {
@@ -168,7 +167,7 @@ exports.vouches = function (msg, args, client) {
 		}
 
 		let vouch_objects = user_vouches.reverse().slice(page * 5, page * 5 + 5);
-		generate_vouches(vouch_objects, client, function (vouches) {
+		generate_vouches(vouch_objects, client, page * 5 + 1, function (vouches) {
 			let vouch_text = "";
 
 			vouches.forEach(vouch => {

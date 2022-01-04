@@ -5,5 +5,5 @@ module.exports = {
 	"BOT_TOKEN": process.env.BOT_TOKEN,
 	"SENTRY_DSN": process.env.SENTRY_DSN,
 	"DB_URL": process.env.DB_URL,
-	"EMBED_COLOR": "#ffffff"
+	"EMBED_COLOR": "#F6931B"
 }
