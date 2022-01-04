@@ -36,7 +36,6 @@ const get_target = function (msg, args) {
 }
 
 const generate_vouches = function (vouch_objects, client, callback) {
-	let count = 0;
 	let vouches = [];
 
 	if (vouch_objects.length > 0) {
@@ -46,20 +45,13 @@ const generate_vouches = function (vouch_objects, client, callback) {
 
 			const icon = (result.positive) ? ":arrow_up:" : ":arrow_down:";
 
-			// Convert id of user that sent in reputation to tag
-			lib.idToTag(result.from_id, client, function (err, tag) {
-				const human_index = index + 1;
-				const date = lib.dateToString(result.date);
+			const human_index = index + 1;
+			const date = lib.dateToString(result.date);
 
-				vouches[index] = `${human_index}) ${icon} ${tag} ${message} | ${date}`
-
-				count++;
-
-				if (count === vouch_objects.length) {
-					return callback(vouches);
-				}
-			})
+			vouches[index] = `${human_index}) ${icon} <@${result.from_id}> ${message} | ${date}`
 		})
+
+		return callback(vouches);
 	} else {
 		return callback(["No vouches yet..."]);
 	}
@@ -73,50 +65,50 @@ exports.profile = function (msg, args, client) {
 
 	// Get user profile from database
 	database.getUserProfile(id, function (err, profile) {
-			if (err) {
-				if (err === "ERR_NO_USER_FOUND") {
-					if (id === msg.author.id) {
-						return msg.reply("you do not have a profile on Vouch Plus. Please run +help for help.");
-					} else {
-						return msg.reply("user does not have a profile on Vouch Plus.");
-					}
+		if (err) {
+			if (err === "ERR_NO_USER_FOUND") {
+				if (id === msg.author.id) {
+					return msg.reply("you do not have a profile on Vouch Plus. Please run +help for help.");
+				} else {
+					return msg.reply("user does not have a profile on Vouch Plus.");
 				}
-
-				console.error(err);
-				Sentry.captureException(err);
-				return msg.reply('There was an unknown error. Please try again later.');
 			}
 
-			// Get reputation sum
-			const positive_rep = profile.vouches.filter(e => e.positive === true).length;
-			const negative_rep = profile.vouches.filter(e => e.positive === false).length;
-			const reputation_sum = positive_rep - negative_rep;
+			console.error(err);
+			Sentry.captureException(err);
+			return msg.reply('There was an unknown error. Please try again later.');
+		}
 
-			let vouch_objects = profile.vouches.reverse().slice(0, 5);
-			generate_vouches(vouch_objects, client, function (vouches) {
-				let vouch_text = "";
+		// Get reputation sum
+		const positive_rep = profile.vouches.filter(e => e.positive === true).length;
+		const negative_rep = profile.vouches.filter(e => e.positive === false).length;
+		const reputation_sum = positive_rep - negative_rep;
 
-				vouches.forEach(vouch => {
-					vouch_text += vouch + "\n"
-				})
+		let vouch_objects = profile.vouches.reverse().slice(0, 5);
+		generate_vouches(vouch_objects, client, function (vouches) {
+			let vouch_text = "";
 
-				const remaining_vouches = profile.vouches.length - vouches.length;
+			vouches.forEach(vouch => {
+				vouch_text += vouch + "\n"
+			})
 
-				if (remaining_vouches > 0) vouch_text += `*+ ${remaining_vouches} more*`
+			const remaining_vouches = profile.vouches.length - vouches.length;
 
-				lib.idToTag(id, client, function (err, tag) {
-					const embed = new MessageEmbed()
-						.setColor(config.EMBED_COLOR)
-						.setTitle(`Viewing profile of ${tag}`)
-						.addField("Reputation", `${reputation_sum} (${positive_rep} positive, ${negative_rep} negative)`, true)
-						.addField("DWC", profile.dwc, true)
-						.addField("Vouches", vouch_text, false)
-						.setFooter("Bot created by cryptographic#1337. DM me for your own coding project you need made!");
+			if (remaining_vouches > 0) vouch_text += `*+ ${remaining_vouches} more*`
 
-					msg.channel.send(embed);
-				})
-			});
-		})
+			lib.idToTag(id, client, function (err, tag) {
+				const embed = new MessageEmbed()
+					.setColor(config.EMBED_COLOR)
+					.setTitle(`Viewing profile of ${tag}`)
+					.addField("Reputation", `${reputation_sum} (${positive_rep} positive, ${negative_rep} negative)`, true)
+					.addField("DWC", profile.dwc, true)
+					.addField("Vouches", vouch_text, false)
+					.setFooter("Bot created by cryptographic#1337. DM me for your own coding project you need made!");
+
+				msg.channel.send(embed);
+			})
+		});
+	})
 }
 
 exports.rep = function (msg, args, type) {
@@ -204,34 +196,17 @@ exports.leaderboard = function (msg, client) {
 			return msg.reply('There was an unknown error. Please try again later.');
 		}
 
-		let new_leaderboard = [];
+		let leaderboard_text = "";
 
-		let count = 0;
 		leaderboard.forEach((result, index) => {
-			lib.idToTag(result.id, client, function (err, tag) {
-				new_leaderboard[index] = {"tag": tag, "reputation": result.reputation}
-
-				count++;
-
-				if (count === leaderboard.length) {
-					send_message()
-				}
-			})
+			leaderboard_text += `${index + 1}) <@${result.id}> (${result.reputation} rep)\n`
 		})
 
-		function send_message() {
-			let leaderboard_text = "";
+		const embed = new MessageEmbed()
+			.setTitle("Top 20 Users")
+			.addField("Leaderboard", leaderboard_text, false)
 
-			new_leaderboard.forEach((result, index) => {
-				leaderboard_text += `${index + 1}) ${result.tag} (${result.reputation} rep)\n`
-			})
-
-			const embed = new MessageEmbed()
-				.setTitle("Top 20 Users")
-				.addField("Leaderboard", leaderboard_text,false)
-
-			msg.channel.send(embed)
-		}
+		msg.channel.send(embed)
 	})
 }
 
