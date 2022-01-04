@@ -77,3 +77,35 @@ exports.getUserVouches = function (id, callback) {
 		})
 	})
 }
+
+exports.getLeaderboard = function (limit, callback) {
+	let leaderboard = {};
+	Vouch.find({}, ['to_id', 'positive'], null, function (err, vouches) {
+		if (err) return callback(err);
+
+		vouches.forEach(result => {
+			const type = (result.positive) ? 1 : -1;
+
+			if (leaderboard[result.to_id]) {
+				leaderboard[result.to_id] += type;
+			} else {
+				leaderboard[result.to_id] = type;
+			}
+		})
+
+		let leaderboard_array = [];
+
+		for (let key in leaderboard) {
+			leaderboard_array.push({
+				"id": key,
+				"reputation": leaderboard[key]
+			})
+		}
+
+		leaderboard_array.sort(function (a, b) {
+			return b.reputation - a.reputation
+		})
+
+		return callback(null, leaderboard_array.slice(0, limit));
+	})
+}

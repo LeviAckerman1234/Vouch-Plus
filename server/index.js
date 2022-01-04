@@ -44,6 +44,7 @@ client.on("message", function (msg) {
 	}
 	if (command === "rep") return commands.rep(msg, args, msg.content.slice(0, 1));
 	if (command === "vouches" || command === "v") return commands.vouches(msg, args, client);
+	if (command === "leaderboard" || command === "l") return commands.leaderboard(msg, client);
 
 	// System commands
 	if (command === "h" || command === "help") return commands.help(msg);

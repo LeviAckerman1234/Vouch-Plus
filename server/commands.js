@@ -162,7 +162,6 @@ exports.vouches = function (msg, args, client) {
 
 	database.getUserVouches(id, function (err, user_vouches) {
 		if (err) {
-
 			if (err === "ERR_NO_USER_FOUND") return msg.reply('user does not have a profile on Vouch Plus.');
 
 			console.error(err);
@@ -194,6 +193,45 @@ exports.vouches = function (msg, args, client) {
 				msg.channel.send(embed);
 			});
 		})
+	})
+}
+
+exports.leaderboard = function (msg, client) {
+	database.getLeaderboard(20, function (err, leaderboard) {
+		if (err) {
+			console.error(err);
+			Sentry.captureException(err);
+			return msg.reply('There was an unknown error. Please try again later.');
+		}
+
+		let new_leaderboard = [];
+
+		let count = 0;
+		leaderboard.forEach((result, index) => {
+			lib.idToTag(result.id, client, function (err, tag) {
+				new_leaderboard[index] = {"tag": tag, "reputation": result.reputation}
+
+				count++;
+
+				if (count === leaderboard.length) {
+					send_message()
+				}
+			})
+		})
+
+		function send_message() {
+			let leaderboard_text = "";
+
+			new_leaderboard.forEach((result, index) => {
+				leaderboard_text += `${index + 1}) ${result.tag} (${result.reputation} rep)\n`
+			})
+
+			const embed = new MessageEmbed()
+				.setTitle("Top 20 Users")
+				.addField("Leaderboard", leaderboard_text,false)
+
+			msg.channel.send(embed)
+		}
 	})
 }
 
